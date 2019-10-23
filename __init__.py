@@ -15,6 +15,7 @@
 import json
 import pytz
 import time
+import re
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -29,6 +30,7 @@ from mycroft.util.format import nice_date, nice_time
 from mycroft.util.log import LOG
 from mycroft.util.format import nice_number, pronounce_number, join_list
 from mycroft.util.parse import extract_datetime, extract_number
+from mycroft.api import GeolocationApi
 from pyowm.webapi25.forecaster import Forecaster
 from pyowm.webapi25.forecastparser import ForecastParser
 from pyowm.webapi25.observationparser import ObservationParser
@@ -290,6 +292,8 @@ class WeatherSkill(MycroftSkill):
         # Use Mycroft proxy if no private key provided
         self.settings["api_key"] = None
         self.settings["use_proxy"] = True
+        
+        self.geolocation_api = GeolocationApi()
 
     def initialize(self):
         # TODO: Remove lat,lon parameters from the OWMApi()
@@ -306,6 +310,7 @@ class WeatherSkill(MycroftSkill):
             self.owm.set_OWM_language(lang=OWMApi.get_language(self.lang))
 
         self.schedule_for_daily_use()
+        
         try:
             self.mark2_forecast(self.__initialize_report(None))
         except Exception as e:
@@ -1136,6 +1141,35 @@ class WeatherSkill(MycroftSkill):
             dtSunset = self.__to_Local(dtSunset.replace(tzinfo=pytz.utc))
         spoken_time = self.__nice_time(dtSunset, use_ampm=True)
         self.speak_dialog('sunset', {'time': spoken_time})
+        
+    def __regex_location(self, utt):
+        """ Get the location using regex on an utterance.
+        TODO: Switch to native regex
+        
+        Arguments:
+            utt (Str): Utterance to parse with the regex
+        Returns: Str      
+        """
+        self.log.debug("Utterance being searched: " + utt)
+        rx_file = self.find_resource('location.rx', 'regex')
+        if utt and rx_file:
+            with open(rx_file) as f:
+                for pat in f.read().splitlines():
+                    pat = pat.strip()
+                    self.log.debug("Regex pattern: " + pat)
+                    if pat and pat[0] == "#":
+                        continue
+                    res = re.search(pat, utt)
+                    if res:
+                        try:
+                            name = res.group("Location").strip()
+                            self.log.debug('Regex Location extracted: '
+                                           + name)
+                            if name and len(name.strip()) > 0:
+                                return name
+                        except IndexError:
+                            pass
+        return ''
 
     def __get_location(self, message):
         """ Attempt to extract a location from the spoken phrase.
@@ -1146,25 +1180,80 @@ class WeatherSkill(MycroftSkill):
             message (Message): messagebus message
         Returns: tuple (lat, long, location string, pretty location)
         """
-        try:
-            location = message.data.get("Location", None) if message else None
-            if location:
-                return None, None, location, location
-
-            location = self.location
-
-            if isinstance(location, dict):
-                lat = location["coordinate"]["latitude"]
-                lon = location["coordinate"]["longitude"]
+        location = None
+        
+        if message and 'utterance' in message.data:
+            self.log.info(f'__get_location: Message: {message}')
+            
+            utt = message.data.get("utterance", '')
+            self.log.info(f'__get_location: Utterance: {utt}')
+            
+            loc_string = self.__regex_location(utt)
+            self.log.info(f'__get_location: Location String: {loc_string}')
+            
+            if loc_string:
+                # try:
+                # try:
+                #     location = self.geolocation_api.get_geolocation(loc_string)
+                # except:
+                #     location = None
+                #     pass
+                # log_msg = '__get_location: Geolocation for "{}" is: {}'
+                # self.log.info(log_msg.format(loc_string, location))
+                
+                location = {
+                    'city': 'New York City',
+                    'country': 'United States',
+                    'region': 'New York',
+                    'timezone': 'America/New York',
+                    'latitude': 40.71,
+                    'longitude': -74.01,
+                }
+                
+                lat = location["latitude"]
+                lon = location["longitude"]
                 city = location["city"]
-                state = city["state"]
-                return lat, lon, city["name"] + ", " + state["name"] + \
-                    ", " + state["country"]["name"], self.location_pretty
-
-            return None
-        except Exception:
-            self.speak_dialog("location.not.found")
-            raise LocationNotFoundError("Location not found")
+                state = location["region"]
+                country = location["country"]
+                # except:
+                #     location = None
+                #     self.speak_dialog("location.not.found")
+                #     #raise LocationNotFoundError("Location not found")
+                
+        if location is None:
+            self.log.info(f'__get_location: Going to default')
+            location = self.location
+            
+            lat = location["coordinate"]["latitude"]
+            lon = location["coordinate"]["longitude"]
+            city = location["city"]["name"]
+            state = location["city"]["state"]["name"]
+            country = location["city"]["state"]["country"]["name"]
+            
+        for detail1 in location:
+            if type(location[detail1]) is dict:
+                self.log.info(f'(1) {detail1}')
+                for detail2 in location[detail1]:
+                    if type(location[detail1][detail2]) is dict:
+                        self.log.info(f'(2) {detail2}')
+                        for detail3 in location[detail1][detail2]:
+                            if type(location[detail1][detail2][detail3]) is dict:
+                                self.log.info(f'(3) {detail3}')
+                                for detail4 in location[detail1][detail2][detail3]:
+                                    self.log.info(f'(4) {detail4}: {location[detail1][detail2][detail3][detail4]} {type(location[detail1][detail2][detail3][detail4])}')
+                            else:
+                                self.log.info(f'(3) {detail3}: {location[detail1][detail2][detail3]} {type(location[detail1][detail2][detail3])}')
+                    else:
+                        self.log.info(f'(2) {detail2}: {location[detail1][detail2]} {type(location[detail1][detail2])}')
+            else:
+                self.log.info(f'(1) {detail1}: {location[detail1]} {type(location[detail1])}')
+                
+        
+        self.log.info(f'__get_location: Location: {city}, {state}, {country}')
+        self.log.info(f'__get_location: Coordinates: {lat}, {lon}')
+        
+        return lat, lon, city + ", " + state + \
+            ", " + country, city
 
     def __initialize_report(self, message):
         """ Creates a report base with location, unit. """
@@ -1186,6 +1275,7 @@ class WeatherSkill(MycroftSkill):
                         message.data.get('utterance'), lang=self.lang)
 
             report = self.__initialize_report(message)
+            
             if today != when:
                 self.log.debug("Doing a forecast {} {}".format(today, when))
                 return self.report_forecast(report, when,
@@ -1290,7 +1380,7 @@ class WeatherSkill(MycroftSkill):
             report['full_location'],
             report['lat'],
             report['lon'])
-
+        
         # Change encoding of the localized report to utf8 if needed
         condition = currentWeather.get_detailed_status()
         if self.owm.encoding != 'utf8':
