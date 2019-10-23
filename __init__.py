@@ -1281,6 +1281,7 @@ class WeatherSkill(MycroftSkill):
         currentWeather = self.owm.weather_at_place(
             report['full_location'], report['lat'],
             report['lon']).get_weather()
+
         # Get forecast for the day
         # can get 'min', 'max', 'eve', 'morn', 'night', 'day'
         # Set time to 12 instead of 00 to accomodate for timezones
@@ -1306,9 +1307,8 @@ class WeatherSkill(MycroftSkill):
         report['temp_max'] = self.__get_temperature(forecastWeather, 'max',
                                                     unit)
         report['humidity'] = self.translate(
-            'percentage.number', {'num': forecastWeather.get_humidity()})
-
-        wind = self.get_wind_speed(forecastWeather)
+            'percentage.number', {'num': currentWeather.get_humidity()})
+        wind = self.get_wind_speed(currentWeather)
         report['wind'] = "{} {}".format(wind[0], wind[1] or "")
         report['day'] = "today"
 
@@ -1540,12 +1540,13 @@ class WeatherSkill(MycroftSkill):
         """
         # convert time to UTC/GMT (forecast is in GMT)
         whenGMT = self.__to_UTC(when)
-
+        
         # search for the requested date in the returned forecast data
         forecasts = self.owm.daily_forecast(location, lat, lon, limit=14)
         forecasts = forecasts.get_forecast()
+        
         for weather in forecasts.get_weathers():
-            forecastDate = datetime.fromtimestamp(weather.get_reference_time())
+            forecastDate = weather.get_reference_time("date")
             if forecastDate.date() == whenGMT.date():
                 # found the right day, now format up the results
                 return weather
