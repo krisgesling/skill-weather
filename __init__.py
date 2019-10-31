@@ -1464,18 +1464,23 @@ class WeatherSkill(MycroftSkill):
 
         return report
     
-    def __report_no_data(self, report_process):
+    def __report_no_data(self, report_type, data=None):
         """ Do processes when Report Processes malfunction
 
         Arguments:
-            report_process (str): Report Process where the error was from
+            report_type (str): Report type where the error was from
+                    i.e. 'weather', 'location'
+            data (dict): Needed data for dialog on weather error processing
 
         Returns:
             None
         """
-        if report_process == 'weather':
-            self.speak_dialog('cant.get.forecast')
-        elif report_process == 'location':
+        if report_type == 'weather':
+            if data is None:
+                self.speak_dialog('cant.get.forecast')
+            else:
+                self.speak_dialog("no forecast", data)
+        elif report_type == 'location':
             self.speak_dialog('location.not.found')
         
 
@@ -1536,8 +1541,8 @@ class WeatherSkill(MycroftSkill):
         """
         report = self.__populate_forecast(report, when, unit, preface_day)
         if report is None:
-            self.speak_dialog("no forecast",
-                              {'day': self.__to_day(when, preface_day)})
+            data = {'day': self.__to_day(when, preface_day)}
+            self.__report_no_data('weather', data)
             return
 
         self.__report_weather('forecast', report, rtype=dialog)
