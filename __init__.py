@@ -933,7 +933,6 @@ class WeatherSkill(MycroftSkill):
     def handle_isit_raining(self, message):
         """ Handler for utterances similar to "is it raining today?"
         """
-    def handle_isit_raining(self, message):
         self.log.info("Handler: handle_isit_raining")
         report = self.__populate_report(message)
             
