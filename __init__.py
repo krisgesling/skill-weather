@@ -1622,6 +1622,8 @@ class WeatherSkill(MycroftSkill):
         dialog_name = timeframe
         if report['location'] == self.location_pretty:
             dialog_name += ".local"
+        else:
+            dialog_name += ".location"
         dialog_name += "." + rtype
         self.log.debug("Dialog: " + dialog_name)
         self.speak_dialog(dialog_name, report)
