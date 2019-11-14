@@ -1178,50 +1178,35 @@ class WeatherSkill(MycroftSkill):
 
         Arguments:
             message (Message): messagebus message
-        Returns: tuple (lat, long, location string, pretty location)
+        Returns: tuple (lat, long, location string, pretty location, timezone)
+            or string (loc_string)
         """
         location = None
         
-        if message and 'utterance' in message.data:
-            self.log.info(f'__get_location: Message: {message}')
-            
+        if message and 'utterance' in message.data:            
             utt = message.data.get("utterance", '')
-            self.log.info(f'__get_location: Utterance: {utt}')
-            
             loc_string = self.__regex_location(utt)
-            self.log.info(f'__get_location: Location String: {loc_string}')
             
             if loc_string:
-                # try:
-                # try:
-                #     location = self.geolocation_api.get_geolocation(loc_string)
-                # except:
-                #     location = None
-                #     pass
-                # log_msg = '__get_location: Geolocation for "{}" is: {}'
-                # self.log.info(log_msg.format(loc_string, location))
+                try:
+                    location = self.geolocation_api.get_geolocation(loc_string)
+                except:
+                    return loc_string
                 
-                location = {
-                    'city': 'New York City',
-                    'country': 'United States',
-                    'region': 'New York',
-                    'timezone': 'America/New York',
-                    'latitude': 40.71,
-                    'longitude': -74.01,
-                }
+                if location is None:
+                    return loc_string
+                
+                log_msg = '__get_location: Geolocation for "{}" is: {}'
+                self.log.debug(log_msg.format(loc_string, location))
                 
                 lat = location["latitude"]
                 lon = location["longitude"]
                 city = location["city"]
                 state = location["region"]
                 country = location["country"]
-                # except:
-                #     location = None
-                #     self.speak_dialog("location.not.found")
-                #     #raise LocationNotFoundError("Location not found")
+                timezone = location["timezone"]
                 
         if location is None:
-            self.log.info(f'__get_location: Going to default')
             location = self.location
             
             lat = location["coordinate"]["latitude"]
@@ -1229,42 +1214,28 @@ class WeatherSkill(MycroftSkill):
             city = location["city"]["name"]
             state = location["city"]["state"]["name"]
             country = location["city"]["state"]["country"]["name"]
-            
-        for detail1 in location:
-            if type(location[detail1]) is dict:
-                self.log.info(f'(1) {detail1}')
-                for detail2 in location[detail1]:
-                    if type(location[detail1][detail2]) is dict:
-                        self.log.info(f'(2) {detail2}')
-                        for detail3 in location[detail1][detail2]:
-                            if type(location[detail1][detail2][detail3]) is dict:
-                                self.log.info(f'(3) {detail3}')
-                                for detail4 in location[detail1][detail2][detail3]:
-                                    self.log.info(f'(4) {detail4}: {location[detail1][detail2][detail3][detail4]} {type(location[detail1][detail2][detail3][detail4])}')
-                            else:
-                                self.log.info(f'(3) {detail3}: {location[detail1][detail2][detail3]} {type(location[detail1][detail2][detail3])}')
-                    else:
-                        self.log.info(f'(2) {detail2}: {location[detail1][detail2]} {type(location[detail1][detail2])}')
-            else:
-                self.log.info(f'(1) {detail1}: {location[detail1]} {type(location[detail1])}')
-                
-        
-        self.log.info(f'__get_location: Location: {city}, {state}, {country}')
-        self.log.info(f'__get_location: Coordinates: {lat}, {lon}')
-        
+            timezone = location["timezone"]["code"]
+
         return lat, lon, city + ", " + state + \
-            ", " + country, city
+            ", " + country, city, timezone
 
     def __initialize_report(self, message):
         """ Creates a report base with location, unit. """
-        lat, lon, location, pretty_location = self.__get_location(message)
+        loc_details = self.__get_location(message)
+        if type(loc_details) is str:
+            self.__report_no_data('location', {'location': loc_details})
+            return None
+        else:
+            lat, lon, location, pretty_location, timezone = loc_details
         temp_unit = self.__get_requested_unit(message)
+        timezone = pytz.timezone(timezone)
         return {
             'lat': lat,
             'lon': lon,
             'location': pretty_location,
             'full_location': location,
-            'scale': self.translate(temp_unit or self.__get_temperature_unit())
+            'scale': self.translate(temp_unit or self.__get_temperature_unit()),
+            'timezone': timezone
         }
 
     def __handle_typed(self, message, response_type):
@@ -1443,6 +1414,23 @@ class WeatherSkill(MycroftSkill):
         report['day'] = self.__to_day(when, preface_day)
 
         return report
+
+    def __report_no_data(self, report_type, data=None):
+        """ Do processes when Report Processes malfunction
+        Arguments:
+            report_type (str): Report type where the error was from
+                    i.e. 'weather', 'location'
+            data (dict): Needed data for dialog on weather error processing
+        Returns:
+            None
+        """
+        if report_type == 'weather':
+            if data is None:
+                self.speak_dialog("cant.get.forecast")
+            else:
+                self.speak_dialog("no.forecast", data)
+        elif report_type == 'location':
+            self.speak_dialog('location.not.found', data)
 
     def __select_condition_dialog(self, message, report, noun, exp=None):
         """ Select the relevant dialog file for condition based reports.
@@ -1781,6 +1769,17 @@ class WeatherSkill(MycroftSkill):
                 when = when.replace(tzinfo=pytz.utc)
             timezone = pytz.timezone(self.location["timezone"]["code"])
             return when.astimezone(timezone)
+        
+    def __to_Timezone(self, when, timezone):
+        """ Convert datetime object to another timezone
+
+            Arguments:
+                when (datetime): Datetime object with timezone
+                timezone (pytz.timezone): pytz timezone object
+            Returns:
+                datetime: when converted to the given timezone
+        """
+        return when.astimezone(timezone)
 
     def __to_time_period(self, when):
         # Translate a specific time '9am' to period of the day 'morning'
