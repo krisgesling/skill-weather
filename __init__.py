@@ -606,11 +606,14 @@ class WeatherSkill(MycroftSkill):
                                               lang=self.lang)[0]
         blank_dt =  datetime.strptime('1 Jan 1970', '%d %b %Y')
 
-        # extract_datetime cannot handle "tonight" without a time.
+        # extract_datetime cannot handle "tonight" and "midnight" without a time.
         # TODO remove workaround when updated in Lingua Franca
-        if (when.time() == blank_dt.time() and
-                "tonight" in message.data.get('utterance')):
-            when = when.replace(hour=22)
+        if when.time() == blank_dt.time():
+            if self.voc_match(message.data.get('utterance'), 'Night'):
+                tonight = extract_datetime('evening', lang=self.lang)[0]
+                when = when.replace(hour=tonight.hour)
+            elif self.voc_match(message.data.get('utterance'), 'Overnight'):
+                when = when.replace(hour=00)
         
         when = self.__to_UTC(when)
         time_diff = (when - now)
@@ -1279,16 +1282,20 @@ class WeatherSkill(MycroftSkill):
         blank_dt =  datetime.strptime('1 Jan 1970', '%d %b %Y')
         self.log.debug('extracted when: {}'.format(when))
         
-        # extract_datetime cannot handle "tonight" without a time.
+        # extract_datetime cannot handle "tonight" and "midnight" without a time.
         # TODO remove workaround when updated in Lingua Franca
-        if (when.time() == blank_dt.time() and
-                "tonight" in message.data.get('utterance')):
-            when = when.replace(hour=22)
+        if when.time() == blank_dt.time():
+            if self.voc_match(message.data.get('utterance'), 'Night'):
+                tonight = extract_datetime('evening', lang=self.lang)[0]
+                when = when.replace(hour=tonight.hour)
+            elif self.voc_match(message.data.get('utterance'), 'Overnight'):
+                when = when.replace(hour=00)
+                report_type = 'Hourly'
         
         when = self.__to_UTC(when)
         report = self.__initialize_report(message)
         
-        if when.time() != today.time() or report_type == 'Hourly':
+        if report_type == 'Hourly' or when.time() != today.time():
             self.log.debug("Forecast for time: " + str(when))
             return self.__populate_for_time(report, when)
         elif today != when:
