@@ -341,6 +341,8 @@ class WeatherSkill(MycroftSkill):
     def prime_weather_cache(self):
         # If not already cached, this will reach out for current conditions
         report = self.__initialize_report(None)
+        if report is None:
+            return
         try:
             self.owm.weather_at_place(
                 report['full_location'], report['lat'],
@@ -481,7 +483,9 @@ class WeatherSkill(MycroftSkill):
         if 'location' in message.data:
             report = self.__initialize_report(message.data.get('utterance'))
         else:
-            report = self.__initialize_report(None)
+            report = self.__initialize_report(None)    
+        if report is None:
+            return
         
         try:
             self.report_multiday_forecast(report)
@@ -510,6 +514,8 @@ class WeatherSkill(MycroftSkill):
         # TODO consider merging in weekend intent
         
         report = self.__initialize_report(None)
+        if report is None:
+            return
         if message.data.get('day_one'):
             # report two or more specific days
             days = []
@@ -542,6 +548,8 @@ class WeatherSkill(MycroftSkill):
         """
         
         report = self.__initialize_report(None)
+        if report is None:
+            return
         # report x number of days
         today = self.__get_today_UTC()
         when = self.__extract_datetime('tomorrow',
@@ -565,7 +573,6 @@ class WeatherSkill(MycroftSkill):
                                 lang=self.lang, anchorDate=today)
         
         report = self.__initialize_report(utt)
-        
         if report is None:
             return
         
@@ -586,7 +593,9 @@ class WeatherSkill(MycroftSkill):
             report = self.__initialize_report(message.data.get('utterance'))
         else:
             report = self.__initialize_report(None)
-
+        if report is None:
+            return
+        
         # Get near-future forecast
         forecastWeather = self.owm.three_hours_forecast(
             report['full_location'],
@@ -652,7 +661,9 @@ class WeatherSkill(MycroftSkill):
             report = self.__initialize_report(message.data.get('utterance'))
         else:
             report = self.__initialize_report(None)
-            
+        if report is None:
+            return
+        
         # Get a date from spoken request
         when, _ = self.__extract_datetime('next saturday', lang='en-us')
         self.report_forecast(report, when)
@@ -668,7 +679,9 @@ class WeatherSkill(MycroftSkill):
             report = self.__initialize_report(message.data.get('utterance'))
         else:
             report = self.__initialize_report(None)
-
+        if report is None:
+            return
+        
         # Get a date from spoken request
         when, _ = self.__extract_datetime('this saturday', lang='en-us')
         self.report_forecast(report, when)
@@ -684,11 +697,13 @@ class WeatherSkill(MycroftSkill):
         today = self.__get_today_UTC()
         when, utt = self.__extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
-        
-        report = self.__initialize_report(utt)
-        
-        if not when:
+        if when is None:
             when = today
+            
+        report = self.__initialize_report(utt)
+        if report is None:
+            return
+
         days = [when + timedelta(days=i) for i in range(7)]
         # Fetch forecasts/reports for week
         forecasts = [dict(self.__populate_forecast(report, day,
@@ -982,6 +997,9 @@ class WeatherSkill(MycroftSkill):
                                 lang=self.lang, anchorDate=today)
         
         report = self.__initialize_report(utt)
+        if report is None:
+            return
+        
         # search the forecast for precipitation
         weathers = self.owm.daily_forecast(
                             report['full_location'],
@@ -1042,6 +1060,8 @@ class WeatherSkill(MycroftSkill):
         when, utt = self.__extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
         report = self.__initialize_report(message)
+        if report is None:
+            return
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1075,6 +1095,8 @@ class WeatherSkill(MycroftSkill):
         when, utt = self.__extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
         report = self.__initialize_report(utt)
+        if report is None:
+            return
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1166,6 +1188,9 @@ class WeatherSkill(MycroftSkill):
         when, utt = self.__extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
         report = self.__initialize_report(utt)
+        if report is None:
+            return
+        
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
                 report['full_location'],
@@ -1202,6 +1227,9 @@ class WeatherSkill(MycroftSkill):
         when, utt = self.__extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
         report = self.__initialize_report(utt)
+        if report is None:
+            return
+        
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
                 report['full_location'],
@@ -1344,6 +1372,8 @@ class WeatherSkill(MycroftSkill):
                                 lang=self.lang, anchorDate=today)
 
         report = self.__initialize_report(utt)
+        if report is None:
+            return
         if today != when:
             self.log.debug("Doing a forecast {} {}".format(today, when))
             return self.report_forecast(report, when,
@@ -1381,6 +1411,8 @@ class WeatherSkill(MycroftSkill):
         
         when = self.__to_UTC(when)
         report = self.__initialize_report(utt)
+        if report is None:
+            return None
         
         if report_type == 'Hourly' or when.time() != today.time():
             self.log.debug("Forecast for time: " + str(when))
