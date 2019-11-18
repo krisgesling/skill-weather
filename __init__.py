@@ -568,13 +568,19 @@ class WeatherSkill(MycroftSkill):
                     .optionally("Location").build())
     def handle_forecast(self, message):
         # Get a date from spoken request
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                     lang=self.lang)
         
         report = self.__initialize_report(utt)
         if report is None:
             return
+    
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        when = self.__to_UTC(when)
+        today = self.__extract_datetime('today', lang=self.lang,
+                        timezone=report['timezone'])[0]
         
         if today == when:
             self.handle_current_weather(message)
@@ -638,6 +644,7 @@ class WeatherSkill(MycroftSkill):
             elif self.voc_match(message.data.get('utterance'), 'Overnight'):
                 when = when.replace(hour=00)
         
+        # No need for Timezone conversion for a different location this time.
         when = self.__to_UTC(when)
         time_diff = (when - now)
         mins_diff = (time_diff.days * 1440) + (time_diff.seconds / 60)
@@ -665,9 +672,11 @@ class WeatherSkill(MycroftSkill):
             return
         
         # Get a date from spoken request
-        when, _ = self.__extract_datetime('next saturday', lang='en-us')
+        when, _ = self.__extract_datetime('next saturday', lang='en-us',
+                                          timezone=report['timezone'])
         self.report_forecast(report, when)
-        when, _ = self.__extract_datetime('next sunday', lang='en-us')
+        when, _ = self.__extract_datetime('next sunday', lang='en-us',
+                                          timezone=report['timezone'])
         self.report_forecast(report, when)
 
     @intent_handler(IntentBuilder("").require("Query")
@@ -683,9 +692,11 @@ class WeatherSkill(MycroftSkill):
             return
         
         # Get a date from spoken request
-        when, _ = self.__extract_datetime('this saturday', lang='en-us')
+        when, _ = self.__extract_datetime('this saturday', lang='en-us',
+                                          timezone=report['timezone'])
         self.report_forecast(report, when)
-        when, _ = self.__extract_datetime('this sunday', lang='en-us')
+        when, _ = self.__extract_datetime('this sunday', lang='en-us',
+                                          timezone=report['timezone'])
         self.report_forecast(report, when)
 
     @intent_handler(IntentBuilder("").optionally("Query")
@@ -694,15 +705,22 @@ class WeatherSkill(MycroftSkill):
     def handle_week_weather(self, message):
         """ Handle weather for week.
             Speaks overview of week, not daily forecasts """
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
+        when, utt = extract_datetime(message.data.get('utterance'),
                                 lang=self.lang, anchorDate=today)
-        if when is None:
-            when = today
-            
+                 
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if when is None:
+            when = today
+        else:
+            if report['timezone'].zone != self.location_timezone:
+                when = self.__to_Timezone(when, report['timezone'])
+            when = self.__to_UTC(when)
+        
+        today = self.__extract_datetime('today', lang=self.lang,
+                        timezone=report['timezone'])[0]
 
         days = [when + timedelta(days=i) for i in range(7)]
         # Fetch forecasts/reports for week
@@ -992,13 +1010,19 @@ class WeatherSkill(MycroftSkill):
         "Next").require("Precipitation").optionally("Location").build())
     def handle_next_precipitation(self, message):
         # Get a date from spoken request
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                lang=self.lang)
         
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        when = self.__to_UTC(when)
         
         # search the forecast for precipitation
         weathers = self.owm.daily_forecast(
@@ -1056,12 +1080,18 @@ class WeatherSkill(MycroftSkill):
     @intent_handler(IntentBuilder("").optionally("Query").require("Humidity")
                     .optionally("RelativeDay").optionally("Location").build())
     def handle_humidity(self, message):
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                lang=self.lang)
         report = self.__initialize_report(message)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        when = self.__to_UTC(when)
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1091,12 +1121,18 @@ class WeatherSkill(MycroftSkill):
                     .optionally("Location").optionally("ConfirmQuery")
                     .optionally("RelativeDay").build())
     def handle_windy(self, message):
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                            lang=self.lang)
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        when = self.__to_UTC(when)
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1184,12 +1220,18 @@ class WeatherSkill(MycroftSkill):
     @intent_handler(IntentBuilder("").one_of("Query", "When")
                     .optionally("Location").require("Sunrise").build())
     def handle_sunrise(self, message):
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                            lang=self.lang)
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        when = self.__to_UTC(when)
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1223,12 +1265,18 @@ class WeatherSkill(MycroftSkill):
     @intent_handler(IntentBuilder("").one_of("Query", "When")
                     .optionally("Location").require("Sunset").build())
     def handle_sunset(self, message):
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                            lang=self.lang)
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        when = self.__to_UTC(when)
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
         
         if when.date() == today.date():
             weather = self.owm.weather_at_place(
@@ -1366,13 +1414,20 @@ class WeatherSkill(MycroftSkill):
 
     def __handle_typed(self, message, response_type):
         # Get a date from requests like "weather for next Tuesday"
-        today = self.__get_today_UTC()
-        when, utt = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang, anchorDate=today)
+        when, utt = extract_datetime(message.data.get('utterance'),
+                                     lang=self.lang)
 
         report = self.__initialize_report(utt)
         if report is None:
             return
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        when = self.__to_UTC(when)
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        
         if today != when:
             self.log.debug("Doing a forecast {} {}".format(today, when))
             return self.report_forecast(report, when,
@@ -1389,8 +1444,6 @@ class WeatherSkill(MycroftSkill):
 
     def __populate_report(self, message, report_type=None):
         # Get a date from requests like "weather for next Tuesday"
-        today = self.__to_UTC(extract_datetime('today',
-                                               lang=self.lang)[0])
         when, utt = extract_datetime(message.data.get('utterance'),
                                               lang=self.lang)
         blank_dt =  datetime.strptime('1 Jan 1970', '%d %b %Y')
@@ -1408,10 +1461,16 @@ class WeatherSkill(MycroftSkill):
                 when = when.replace(hour=00)
                 report_type = 'Hourly'
         
-        when = self.__to_UTC(when)
         report = self.__initialize_report(utt)
         if report is None:
             return None
+        
+        if report['timezone'].zone != self.location_timezone:
+            when = self.__to_Timezone(when, report['timezone'])
+            
+        today = self.__extract_datetime('today', lang=self.lang,
+                                        timezone=report['timezone'])[0]
+        when = self.__to_UTC(when)
         
         if report_type == 'Hourly' or when.time() != today.time():
             self.log.debug("Forecast for time: " + str(when))
@@ -1935,8 +1994,6 @@ class WeatherSkill(MycroftSkill):
             # First try with modern mycroft.util.time functions
             return to_utc(when)
         except Exception:
-            # TODO: This uses the device timezone -- should probably use
-            #       the timezone of the location being forecasted
             timezone = pytz.timezone(self.location["timezone"]["code"])
             return timezone.localize(when).astimezone(pytz.utc)
 
@@ -1960,7 +2017,7 @@ class WeatherSkill(MycroftSkill):
             Returns:
                 datetime: when converted to the given timezone
         """
-        return when.astimezone(timezone)
+        return when.replace(tzinfo=timezone)
 
     def __to_time_period(self, when):
         # Translate a specific time '9am' to period of the day 'morning'
@@ -1981,9 +2038,12 @@ class WeatherSkill(MycroftSkill):
         return period
     
     # Suggestion TODO: Add a parameter to extract_datetime to add a default Timezone
-    def __extract_datetime(self, text, anchorDate=None, lang=None, default_time=None):
+    def __extract_datetime(self, text, anchorDate=None, lang=None, 
+                           default_time=None, timezone=None):
         # Change timezone returned by extract_datetime from Local to UTC
         when, text = extract_datetime(text, anchorDate, lang, default_time)
+        if timezone is not None and timezone.zone != self.location_timezone:
+            when = self.__to_Timezone(when, timezone)
         return self.__to_UTC(when), text
     
     def __get_today_UTC(self):
