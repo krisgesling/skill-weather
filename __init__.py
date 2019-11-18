@@ -1297,7 +1297,6 @@ class WeatherSkill(MycroftSkill):
         Arguments:
             utt (str): spoken phrase to be parsed
         Returns: tuple (lat, long, location string, pretty location, timezone)
-            or string (loc_string)
         """
         location = None
         if utt is None:
@@ -1309,10 +1308,10 @@ class WeatherSkill(MycroftSkill):
             try:
                 location = self.geolocation_api.get_geolocation(loc_string)
             except:
-                return loc_string
+                location = None
             
             if location is None:
-                return loc_string
+                return None, None, None, loc_string, None
             
             log_msg = '__get_location: Geolocation for "{}" is: {}'
             self.log.debug(log_msg.format(loc_string, location))
@@ -1348,12 +1347,12 @@ class WeatherSkill(MycroftSkill):
             or None
         """
         
-        loc_details = self.__get_location(utt)
-        if type(loc_details) is str:
-            self.__report_no_data('location', {'location': loc_details})
+        lat, lon, location, pretty_location, timezone = \
+            self.__get_location(utt)
+        if lat is None and lon is None and timezone is None:
+            self.__report_no_data('location', {'location': pretty_location})
             return None
-        else:
-            lat, lon, location, pretty_location, timezone = loc_details
+
         temp_unit = self.__get_requested_unit(utt)
         timezone = pytz.timezone(timezone)
         return {
