@@ -33,7 +33,7 @@ from pyowm.webapi25.forecaster import Forecaster
 from pyowm.webapi25.forecastparser import ForecastParser
 from pyowm.webapi25.observationparser import ObservationParser
 from requests import HTTPError, Response
-
+from pprint import pprint
 try:
     from mycroft.util.time import to_utc, to_local
 except Exception:
@@ -420,9 +420,10 @@ class WeatherSkill(MycroftSkill):
     # DATETIME BASED QUERIES
     # Handle: what is the weather like?
     @intent_handler(IntentBuilder("").one_of("Weather", "Forecast")
-                    .optionally("Query").optionally("Location")
+                    .require("Query").optionally("Location")
                     .optionally("Today").build())
     def handle_current_weather(self, message):
+        self.log.info("handle_current_weather")
         try:
             self.log.debug("Handler: handle_current_weather")
             # Get a date from requests like "weather for next Tuesday"
@@ -452,9 +453,9 @@ class WeatherSkill(MycroftSkill):
     def handle_current_weather_alt(self, message):
         self.handle_current_weather(message)
 
-    @intent_handler(IntentBuilder("").one_of("Weather", "Forecast")
-                    .one_of("Now", "Today").optionally("Location").build())
+    @intent_file_handler("weather.forecast.simple.intent")
     def handle_current_weather_simple(self, message):
+        self.log.info('handle_current_weather_simple')
         self.handle_current_weather(message)
 
     @intent_file_handler("what.is.three.day.forecast.intent")
@@ -533,10 +534,11 @@ class WeatherSkill(MycroftSkill):
             self.log.exception("Error: {0}".format(e))
 
     # Handle: What is the weather forecast?
-    @intent_handler(IntentBuilder("").one_of("Weather", "Forecast")
-                    .optionally("Query").optionally("RelativeDay")
+    @intent_handler(IntentBuilder("")
+                    .one_of("Weather", "Forecast").require("RelativeDay")
                     .optionally("Location").build())
     def handle_forecast(self, message):
+        self.log.info("handle_forecast")
         try:
             report = self.__initialize_report(message)
 
@@ -770,10 +772,24 @@ class WeatherSkill(MycroftSkill):
 
     # CONDITION BASED QUERY HANDLERS ####
     @intent_handler(IntentBuilder("").require("Temperature")
-                    .optionally("Query").optionally("Location")
+                    .require("Query").optionally("Location")
                     .optionally("Unit").optionally("Today")
                     .optionally("Now").build())
     def handle_current_temperature(self, message):
+        self.log.info("handle_current_temperature")
+        return self.__handle_typed(message, 'temperature')
+
+    @intent_handler(IntentBuilder("").require("Temperature")
+                    .optionally("Query").optionally("Location")
+                    .optionally("Unit").one_of("Today", "Now")
+                    .build())
+    def handle_current_temperature_alt(self, message):
+        self.log.info("handle_current_temperature_alt")
+        return self.__handle_typed(message, 'temperature')
+
+    @intent_file_handler("temperature.simple.intent")
+    def handle_current_temperature_simple(self, message):
+        self.log.info('handle_current_temperature_simple')
         return self.__handle_typed(message, 'temperature')
 
     @intent_handler(IntentBuilder("").require("Query").require("High")
@@ -845,7 +861,7 @@ class WeatherSkill(MycroftSkill):
         self.handle_how_hot_or_cold(message)
 
     @intent_handler(IntentBuilder("").require("ConfirmQuery")
-                    .one_of("Snowing").optionally("Location").build())
+                    .require("Snowing").optionally("Location").build())
     def handle_isit_snowing(self, message):
         """ Handler for utterances similar to "is it snowing today?"
         """
@@ -854,7 +870,7 @@ class WeatherSkill(MycroftSkill):
                                                 "snow", "snowing")
         self.speak_dialog(dialog, report)
 
-    @intent_handler(IntentBuilder("").require("ConfirmQuery").one_of(
+    @intent_handler(IntentBuilder("").require("ConfirmQuery").require(
         "Clear").optionally("Location").build())
     def handle_isit_clear(self, message):
         """ Handler for utterances similar to "is it clear skies today?"
@@ -863,7 +879,7 @@ class WeatherSkill(MycroftSkill):
         dialog = self.__select_condition_dialog(message, report, "clear")
         self.speak_dialog(dialog, report)
 
-    @intent_handler(IntentBuilder("").require("ConfirmQuery").one_of(
+    @intent_handler(IntentBuilder("").require("ConfirmQuery").require(
         "Cloudy").optionally("Location").optionally("RelativeTime").build())
     def handle_isit_cloudy(self, message):
         """ Handler for utterances similar to "is it cloudy skies today?"
@@ -872,7 +888,7 @@ class WeatherSkill(MycroftSkill):
         dialog = self.__select_condition_dialog(message, report, "cloudy")
         self.speak_dialog(dialog, report)
 
-    @intent_handler(IntentBuilder("").require("ConfirmQuery").one_of(
+    @intent_handler(IntentBuilder("").require("ConfirmQuery").require(
         "Foggy").optionally("Location").build())
     def handle_isit_foggy(self, message):
         """ Handler for utterances similar to "is it foggy today?"
@@ -882,7 +898,7 @@ class WeatherSkill(MycroftSkill):
                                                 "foggy")
         self.speak_dialog(dialog, report)
 
-    @intent_handler(IntentBuilder("").require("ConfirmQuery").one_of(
+    @intent_handler(IntentBuilder("").require("ConfirmQuery").require(
         "Raining").optionally("Location").build())
     def handle_isit_raining(self, message):
         """ Handler for utterances similar to "is it raining today?"
@@ -896,7 +912,7 @@ class WeatherSkill(MycroftSkill):
     def handle_need_umbrella(self, message):
         self.handle_isit_raining(message)
 
-    @intent_handler(IntentBuilder("").require("ConfirmQuery").one_of(
+    @intent_handler(IntentBuilder("").require("ConfirmQuery").require(
         "Storm").optionally("Location").build())
     def handle_isit_storming(self, message):
         """ Handler for utterances similar to "is it storming today?"
@@ -963,7 +979,7 @@ class WeatherSkill(MycroftSkill):
         self.speak_dialog("no precipitation expected", report)
 
     # Handle: How humid is it?
-    @intent_handler(IntentBuilder("").optionally("Query").require("Humidity")
+    @intent_handler(IntentBuilder("").require("Query").require("Humidity")
                     .optionally("RelativeDay").optionally("Location").build())
     def handle_humidity(self, message):
         report = self.__initialize_report(message)
@@ -987,6 +1003,11 @@ class WeatherSkill(MycroftSkill):
                                {'num': str(weather.get_humidity())})
         loc = message.data.get('Location')
         self.__report_condition(self.__translate("humidity"), value, when, loc)
+
+    @intent_file_handler("humidity.simple.intent")
+    def handle_humidity_simple(self, message):
+        self.log.info('handle_humidity_simple')
+        self.handle_humidity(message)
 
     # Handle: How windy is it?
     @intent_handler(IntentBuilder("").require("Query").require("Windy")
@@ -1195,6 +1216,7 @@ class WeatherSkill(MycroftSkill):
             if report.get('time'):
                 self.__report_weather("at.time", report, response_type)
             else:
+                self.log.info('__handle_typed: Current')
                 self.__report_weather('current', report, response_type)
             self.mark2_forecast(report)
         except APIErrors as e:
@@ -1276,11 +1298,13 @@ class WeatherSkill(MycroftSkill):
 
     def __populate_current(self, report, when, unit=None):
         self.log.debug("Populating report for now: {}".format(when))
+        self.log.info("Populating report for now: {}".format(when))
         # Get current conditions
         today = extract_datetime("today")[0]
         currentWeather = self.owm.weather_at_place(
             report['full_location'], report['lat'],
             report['lon']).get_weather()
+        pprint(currentWeather)
         # Get forecast for the day
         # can get 'min', 'max', 'eve', 'morn', 'night', 'day'
         # Set time to 12 instead of 00 to accomodate for timezones
@@ -1290,7 +1314,7 @@ class WeatherSkill(MycroftSkill):
             report['full_location'],
             report['lat'],
             report['lon'])
-
+        pprint(forecastWeather)
         # Change encoding of the localized report to utf8 if needed
         condition = currentWeather.get_detailed_status()
         if self.owm.encoding != 'utf8':
@@ -1500,6 +1524,7 @@ class WeatherSkill(MycroftSkill):
             dialog_name += ".local"
         dialog_name += "." + rtype
         self.log.debug("Dialog: " + dialog_name)
+        self.log.info(f'__report_weather: {dialog_name}')
         self.speak_dialog(dialog_name, report)
 
         # Just show the icons while still speaking
