@@ -1,0 +1,5 @@
+{
+	"utterance": "Tell me the lowest temperature 5 days from now",
+	"intent_type": "handle_low_temperature",
+	"expected_dialog": "forecast.local.low.temperature"
+}

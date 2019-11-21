@@ -1,0 +1,4 @@
+{
+	"utterance": "Weather for Saturday and Sunday",
+	"expected_dialog": ["forecast.local.weather", "forecast.local.weather"]
+}

@@ -1,0 +1,5 @@
+{
+	"utterance": "Is it going to be hot tomorrow at Hanoi?",
+	"intent_type": "handle_how_hot_or_cold",
+	"expected_dialog": "forecast.high.temperature"
+}

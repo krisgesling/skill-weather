@@ -1,0 +1,5 @@
+{
+	"utterance": "How humid is it tomorrow?",
+	"intent_type": "handle_humidity",
+	"expected_dialog": "report.condition.future"
+}

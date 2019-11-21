@@ -1,0 +1,5 @@
+{
+	"utterance": "Will it be cold tomorrow?",
+	"intent_type": "handle_how_hot_or_cold",
+	"expected_dialog": "forecast.local.low.temperature"
+}

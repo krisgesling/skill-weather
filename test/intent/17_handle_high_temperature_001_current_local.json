@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the highest temperature for today?",
+	"intent_type": "handle_high_temperature",
+	"expected_dialog": "current.local.high.temperature"
+}

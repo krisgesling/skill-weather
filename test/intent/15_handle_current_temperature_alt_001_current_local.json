@@ -1,0 +1,5 @@
+{
+	"utterance": "temperature today",
+	"intent_type": "handle_current_temperature_alt",
+	"expected_dialog": "current.local.temperature"
+}

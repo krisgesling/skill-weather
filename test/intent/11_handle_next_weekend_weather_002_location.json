@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the weather next weekend in Colombo?",
+	"intent_type": "handle_next_weekend_weather",
+	"expected_dialog": ["forecast.weather", "forecast.weather"]
+}

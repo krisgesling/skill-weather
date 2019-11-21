@@ -1,0 +1,5 @@
+{
+	"utterance": "Tell me the maximum temperature in Rabat",
+	"intent_type": "handle_high_temperature",
+	"expected_dialog": "current.high.temperature"
+}

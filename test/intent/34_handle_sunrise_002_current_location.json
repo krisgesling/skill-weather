@@ -1,0 +1,5 @@
+{
+	"utterance": "When is the sunrise at Auckland?",
+	"intent_type": "handle_sunrise",
+	"expected_dialog": "sunrise"
+}

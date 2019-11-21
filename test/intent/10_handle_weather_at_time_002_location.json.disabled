@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the forecast tomorrow morning at Bamako?",
+	"intent_type": "handle_weather_at_time",
+	"expected_dialog": "at.time.weather"
+}

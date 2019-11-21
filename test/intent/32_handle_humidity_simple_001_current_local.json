@@ -1,0 +1,4 @@
+{
+	"utterance": "Humidity",
+	"expected_dialog": "report.condition"
+}

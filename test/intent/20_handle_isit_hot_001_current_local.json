@@ -1,0 +1,5 @@
+{
+	"utterance": "Is it hot today?",
+	"intent_type": "handle_isit_hot",
+	"expected_dialog": "current.local.hot"
+}

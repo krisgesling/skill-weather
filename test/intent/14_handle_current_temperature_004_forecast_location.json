@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the temperature tomorrow in Belgrade?",
+	"intent_type": "handle_current_temperature",
+	"expected_dialog": "forecast.temperature"
+}

@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the weather later in Kabul?",
+	"intent_type": "handle_next_hour",
+	"expected_dialog": "hour.weather"
+}

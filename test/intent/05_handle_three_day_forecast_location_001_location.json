@@ -1,0 +1,4 @@
+{
+	"utterance": "What is the three day weather forecast for Aden?",
+	"expected_dialog": ["forecast.weather", "forecast.weather", "forecast.weather"]
+}

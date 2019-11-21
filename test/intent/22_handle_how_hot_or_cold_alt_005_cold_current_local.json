@@ -1,0 +1,5 @@
+{
+	"utterance": "How cold is it today?",
+	"intent_type": "handle_how_hot_or_cold_alt",
+	"expected_dialog": "current.local.low.temperature"
+}

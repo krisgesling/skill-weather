@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the lowest temperature tomorrow in Singapore?",
+	"intent_type": "handle_low_temperature",
+	"expected_dialog": "forecast.low.temperature"
+}

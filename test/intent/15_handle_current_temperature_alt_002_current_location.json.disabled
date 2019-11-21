@@ -1,0 +1,5 @@
+{
+	"utterance": "temperature now at Lagos",
+	"intent_type": "handle_current_temperature_alt",
+	"expected_dialog": "current.temperature"
+}

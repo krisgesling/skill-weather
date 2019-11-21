@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the humidity?",
+	"intent_type": "handle_humidity",
+	"expected_dialog": "report.condition"
+}

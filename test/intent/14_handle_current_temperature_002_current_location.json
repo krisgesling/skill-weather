@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the temperature in Tehran?",
+	"intent_type": "handle_current_temperature",
+	"expected_dialog": "current.temperature"
+}

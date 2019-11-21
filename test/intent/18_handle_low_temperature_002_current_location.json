@@ -1,0 +1,5 @@
+{
+	"utterance": "Give me the lowest temperature in Kuala Lumpur",
+	"intent_type": "handle_low_temperature",
+	"expected_dialog": "current.low.temperature"
+}

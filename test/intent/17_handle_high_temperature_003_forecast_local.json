@@ -1,0 +1,5 @@
+{
+	"utterance": "Give me the highest temperature it be 2 days from now",
+	"intent_type": "handle_high_temperature",
+	"expected_dialog": "forecast.local.high.temperature"
+}

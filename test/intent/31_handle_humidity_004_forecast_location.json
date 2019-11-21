@@ -1,0 +1,5 @@
+{
+	"utterance": "What's the humidity 2 days from now at Windhoek?",
+	"intent_type": "handle_humidity",
+	"expected_dialog": "report.condition.future.at.location"
+}

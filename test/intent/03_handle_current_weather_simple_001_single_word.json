@@ -1,0 +1,4 @@
+{
+	"utterance": "Weather",
+	"expected_dialog": ["current.local.weather", "min.max"]
+}
