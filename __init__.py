@@ -549,7 +549,6 @@ class WeatherSkill(MycroftSkill):
                     .one_of("Weather", "Forecast").require("RelativeDay")
                     .optionally("Location").build())
     def handle_forecast(self, message):
-        self.log.info("handle_forecast")
         try:
             report = self.__initialize_report(message)
 
@@ -561,19 +560,15 @@ class WeatherSkill(MycroftSkill):
                 self.handle_current_weather(message)
                 return
 
-        # Get a date from spoken request
-        when = self.__extract_datetime(message.data.get('utterance'),
-                                lang=self.lang)[0]
-        today = self.__extract_datetime("today")[0]
+            self.report_forecast(report, when)
 
-        if today == when:
-            self.handle_current_weather(message)
-            return
+            # Establish the daily cadence
+            self.schedule_for_daily_use()
 
-        self.report_forecast(report, when)
-
-        # Establish the daily cadence
-        self.schedule_for_daily_use()
+        except APIErrors as e:
+            self.__api_error(e)
+        except BaseException as e:
+            self.log.exception("Error: {0}".format(e))
 
     # Handle: What's the weather later?
     @intent_handler(IntentBuilder("").require("Query").require(
